@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escaner de Credenciales</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e3c72;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-title i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .preview-box {
+            width: 280px;
+            height: 180px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9f9f9;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-box.filled {
+            border-color: #4CAF50;
+            background-color: #f0f9f0;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+            border-radius: 6px;
+        }
+
+        .preview-text {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .preview-icon {
+            font-size: 24px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .preview-controls {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .preview-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 180px;
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-scan {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-scan:hover {
+            background-color: #3d8b40;
+            transform: translateY(-2px);
+        }
+
+        .btn-generate {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-generate:hover {
+            background-color: #0b7dda;
+            transform: translateY(-2px);
+        }
+
+        .btn-download {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background-color: #e68900;
+            transform: translateY(-2px);
+        }
+
+        .btn-email {
+            background-color: #9C27B0;
+            color: white;
+        }
+
+        .btn-email:hover {
+            background-color: #7b1fa2;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .camera-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .camera-view {
+            width: 100%;
+            max-width: 600px;
+            height: 450px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+            background: #000;
+        }
+
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .crop-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            height: 220px;
+            border: 3px solid #00ff00;
+            background-color: rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-capture {
+            background-color: #f44336;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-cancel {
+            background-color: #757575;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .status {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .status-info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .instructions {
+            background-color: #e8f4fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .instructions h3 {
+            color: #0d47a1;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .user-data-form {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .user-data-form h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #856404;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .email-selector {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .email-selector h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .email-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        .focus-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .resolution-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .preview-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .crop-guide {
+                width: 300px;
+                height: 190px;
+            }
+            
+            .preview-box {
+                width: 240px;
+                height: 160px;
+            }
+            
+            .camera-view {
+                height: 400px;
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Escaner de Credenciales</h1>
+            <p class="subtitle">Digitaliza el frente y reverso de tu identificación</p>
+        </header>
+
+        <div class="instructions">
+            <h3>Instrucciones:</h3>
+            <ul>
+                <li>Haz clic en "Escanear Frente" para capturar el lado frontal de tu credencial</li>
+                <li>Haz clic en "Escanear Reverso" para capturar el lado posterior</li>
+                <li>Encuadra la credencial dentro del recuadro verde antes de capturar</li>
+                <li>La cámara se enfocará automáticamente en la credencial</li>
+                <li>Puedes rotar las imágenes después de capturarlas si es necesario</li>
+                <li>Una vez que tengas ambas imágenes, haz clic en "Generar PDF"</li>
+                <li>Finalmente, puedes "Descargar" el PDF o "Enviar por Correo"</li>
+            </ul>
+        </div>
+
+        <div class="user-data-form">
+            <h3>Datos del Propietario (para nombre del archivo)</h3>
+            <div class="form-group">
+                <label for="user-name">Nombre completo:</label>
+                <input type="text" id="user-name" placeholder="Ej: Juan Pérez García">
+            </div>
+            <div class="form-group">
+                <label for="user-id">Número de identificación:</label>
+                <input type="text" id="user-id" placeholder="Ej: ABC123456789">
+            </div>
+        </div>
+
+        <!-- Selector de correo -->
+        <div class="email-selector">
+            <h3>Destinatario del correo:</h3>
+            <select id="email-select" class="email-select">
+                <option value="rst0113@sears.com.mx">rst0113@sears.com.mx</option>
+                <option value="gc0113@sears.com.mx">gc0113@sears.com.mx</option>
+                <option value="otro">Otro correo electrónico</option>
+            </select>
+            <div id="custom-email-container" style="display: none; margin-top: 10px;">
+                <input type="email" id="custom-email" placeholder="Ingresa el correo electrónico" class="form-group" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <i>📷</i> Vista Previa
+            </div>
+            <div class="preview-container">
+                <div class="preview-box" id="front-preview">
+                    <div class="preview-icon">🆔</div>
+                    <div class="preview-text">Frente</div>
+                    <img class="preview-image" id="front-image" alt="Frente de credencial">
+                    <div class="preview-controls">
+                        <button class="preview-btn" id="rotate-front" title="Rotar imagen">↻</button>
+                    </div>
+                </div>
+                <div class="preview-box" id="back-preview">
+                    <div class="preview-icon">🆔</div>
+                    <div class="preview-text">Reverso</div>
+                    <img class="preview-image" id="back-image" alt="Reverso de credencial">
+                    <div class="preview-controls">
+                        <button class="preview-btn" id="rotate-back" title="Rotar imagen">↻</button>
+                    </div>
+                </div>
+            </div>
+            <div id="status" class="status status-info">
+                Presiona "Escanear Frente" para comenzar
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-scan" id="scan-front">
+                <i>📷</i> Escanear Frente
+            </button>
+            <button class="btn btn-scan" id="scan-back">
+                <i>📷</i> Escanear Reverso
+            </button>
+            <button class="btn btn-generate" id="generate-pdf" disabled>
+                <i>📄</i> Generar PDF
+            </button>
+            <button class="btn btn-download" id="download" disabled>
+                <i>💾</i> Descargar
+            </button>
+            <button class="btn btn-email" id="send-email" disabled>
+                <i>✉️</i> Enviar por Correo
+            </button>
+        </div>
+    </div>
+
+    <div class="camera-container" id="camera-container">
+        <div class="camera-view">
+            <video id="camera-feed" autoplay playsinline></video>
+            <div class="camera-overlay">
+                <div class="crop-guide"></div>
+                <div class="focus-indicator" id="focus-indicator">Enfocando...</div>
+                <div class="resolution-info" id="resolution-info"></div>
+            </div>
+        </div>
+        <div class="camera-controls">
+            <button class="btn-capture" id="capture">
+                <i>📸</i> Capturar
+            </button>
+            <button class="btn-cancel" id="cancel-camera">
+                <i>❌</i> Cancelar
+            </button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Aplicación web para escanear credenciales - Funciona 100% en el navegador</p>
+    </footer>
+
+    <script>
+        // Elementos DOM
+        const scanFrontBtn = document.getElementById('scan-front');
+        const scanBackBtn = document.getElementById('scan-back');
+        const generatePdfBtn = document.getElementById('generate-pdf');
+        const downloadBtn = document.getElementById('download');
+        const sendEmailBtn = document.getElementById('send-email');
+        const cameraContainer = document.getElementById('camera-container');
+        const cameraFeed = document.getElementById('camera-feed');
+        const captureBtn = document.getElementById('capture');
+        const cancelCameraBtn = document.getElementById('cancel-camera');
+        const frontPreview = document.getElementById('front-preview');
+        const backPreview = document.getElementById('back-preview');
+        const frontImage = document.getElementById('front-image');
+        const backImage = document.getElementById('back-image');
+        const rotateFrontBtn = document.getElementById('rotate-front');
+        const rotateBackBtn = document.getElementById('rotate-back');
+        const statusDiv = document.getElementById('status');
+        const userNameInput = document.getElementById('user-name');
+        const userIdInput = document.getElementById('user-id');
+        const emailSelect = document.getElementById('email-select');
+        const customEmailContainer = document.getElementById('custom-email-container');
+        const customEmailInput = document.getElementById('custom-email');
+        const focusIndicator = document.getElementById('focus-indicator');
+        const resolutionInfo = document.getElementById('resolution-info');
+
+        // Variables de estado
+        let stream = null;
+        let currentSide = null;
+        let frontImageData = null;
+        let backImageData = null;
+        let frontRotation = 0;
+        let backRotation = 0;
+        let pdfFile = null;
+        let focusInterval = null;
+
+        // Inicialización - CORREGIDA
+        function init() {
+            console.log('Inicializando aplicación...');
+            
+            // Event listeners para botones de escanear - CORREGIDOS
+            scanFrontBtn.addEventListener('click', function() {
+                console.log('Botón Escanear Frente clickeado');
+                openCamera('front');
+            });
+            
+            scanBackBtn.addEventListener('click', function() {
+                console.log('Botón Escanear Reverso clickeado');
+                openCamera('back');
+            });
+            
+            generatePdfBtn.addEventListener('click', generatePDF);
+            downloadBtn.addEventListener('click', downloadPDF);
+            sendEmailBtn.addEventListener('click', sendEmail);
+            captureBtn.addEventListener('click', captureImage);
+            cancelCameraBtn.addEventListener('click', closeCamera);
+            rotateFrontBtn.addEventListener('click', () => rotateImage('front'));
+            rotateBackBtn.addEventListener('click', () => rotateImage('back'));
+            
+            // Selector de correo
+            emailSelect.addEventListener('change', function() {
+                if (this.value === 'otro') {
+                    customEmailContainer.style.display = 'block';
+                } else {
+                    customEmailContainer.style.display = 'none';
+                }
+            });
+            
+            updateUI();
+            console.log('Aplicación inicializada correctamente');
+        }
+
+        // Abrir cámara - CORREGIDA
+        async function openCamera(side) {
+            console.log(`Abriendo cámara para: ${side}`);
+            currentSide = side;
+            
+            try {
+                // Detener stream anterior si existe
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                const constraints = {
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                };
+                
+                console.log('Solicitando acceso a la cámara...');
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('Acceso a cámara concedido');
+                
+                cameraFeed.srcObject = stream;
+                cameraContainer.style.display = 'flex';
+                statusDiv.textContent = `Encuadra el ${side === 'front' ? 'FRENTE' : 'REVERSO'} de la credencial dentro del marco verde`;
+                statusDiv.className = 'status status-info';
+                
+                // Mostrar resolución actual
+                const track = stream.getVideoTracks()[0];
+                const settings = track.getSettings();
+                resolutionInfo.textContent = `${settings.width || '?'}×${settings.height || '?'}`;
+                resolutionInfo.style.display = 'block';
+                
+                // Iniciar enfoque automático
+                startAutoFocus();
+                
+            } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
+                statusDiv.textContent = 'Error: No se pudo acceder a la cámara. Asegúrate de permitir el acceso.';
+                statusDiv.className = 'status status-error';
+                
+                // Intentar con cámara frontal si falla la trasera
+                try {
+                    console.log('Intentando con cámara frontal...');
+                    const fallbackConstraints = {
+                        video: { 
+                            facingMode: 'user',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+                    
+                    stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                    cameraFeed.srcObject = stream;
+                    cameraContainer.style.display = 'flex';
+                    
+                    const track = stream.getVideoTracks()[0];
+                    const settings = track.getSettings();
+                    resolutionInfo.textContent = `${settings.width || '?'}×${settings.height || '?'}`;
+                    resolutionInfo.style.display = 'block';
+                    
+                    startAutoFocus();
+                    statusDiv.textContent = `Cámara frontal activada. Encuadra el ${side === 'front' ? 'FRENTE' : 'REVERSO'} de la credencial`;
+                    statusDiv.className = 'status status-info';
+                    
+                } catch (fallbackError) {
+                    console.error('Error con cámara frontal:', fallbackError);
+                    statusDiv.textContent = 'Error: No se pudo acceder a ninguna cámara. Verifica los permisos.';
+                    statusDiv.className = 'status status-error';
+                }
+            }
+        }
+
+        // Iniciar enfoque automático
+        function startAutoFocus() {
+            focusIndicator.style.display = 'block';
+            focusIndicator.textContent = 'Enfocando...';
+            
+            let focusCount = 0;
+            focusInterval = setInterval(() => {
+                focusCount++;
+                if (focusCount <= 3) {
+                    focusIndicator.textContent = 'Enfocando' + '.'.repeat(focusCount);
+                } else {
+                    clearInterval(focusInterval);
+                    focusIndicator.textContent = 'Enfocado ✓';
+                    setTimeout(() => {
+                        focusIndicator.style.display = 'none';
+                    }, 1000);
+                }
+            }, 500);
+        }
+
+        // Cerrar cámara
+        function closeCamera() {
+            console.log('Cerrando cámara...');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (focusInterval) {
+                clearInterval(focusInterval);
+                focusInterval = null;
+            }
+            focusIndicator.style.display = 'none';
+            resolutionInfo.style.display = 'none';
+            cameraContainer.style.display = 'none';
+            updateUI();
+        }
+
+        // Capturar imagen
+        function captureImage() {
+            console.log('Capturando imagen...');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Configurar canvas con las dimensiones del video
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
+            
+            // Dibujar el video en el canvas
+            context.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+            
+            // Obtener las dimensiones del recuadro verde
+            const videoRect = {
+                width: cameraFeed.videoWidth,
+                height: cameraFeed.videoHeight
+            };
+            
+            const displayRect = cameraFeed.getBoundingClientRect();
+            const cropGuideRect = document.querySelector('.crop-guide').getBoundingClientRect();
+            
+            // Calcular factores de escala
+            const scaleX = videoRect.width / displayRect.width;
+            const scaleY = videoRect.height / displayRect.height;
+            
+            // Calcular coordenadas de recorte
+            const cropX = (cropGuideRect.left - displayRect.left) * scaleX;
+            const cropY = (cropGuideRect.top - displayRect.top) * scaleY;
+            const cropWidth = cropGuideRect.width * scaleX;
+            const cropHeight = cropGuideRect.height * scaleY;
+            
+            // Crear canvas para imagen recortada
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = cropWidth;
+            croppedCanvas.height = cropHeight;
+            const croppedContext = croppedCanvas.getContext('2d');
+            
+            // Configurar calidad
+            croppedContext.imageSmoothingEnabled = true;
+            croppedContext.imageSmoothingQuality = 'high';
+            
+            // Dibujar el área recortada
+            croppedContext.drawImage(
+                canvas,
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, cropWidth, cropHeight
+            );
+            
+            // Obtener imagen recortada
+            const imageData = croppedCanvas.toDataURL('image/jpeg', 0.9);
+            
+            // Actualizar vista previa
+            if (currentSide === 'front') {
+                frontImageData = imageData;
+                updatePreviewImage(frontImage, imageData);
+                frontPreview.classList.add('filled');
+                frontPreview.querySelector('.preview-icon').style.display = 'none';
+                frontRotation = 0;
+                statusDiv.textContent = 'Frente de la credencial capturado correctamente';
+                console.log('Imagen frontal guardada');
+            } else {
+                backImageData = imageData;
+                updatePreviewImage(backImage, imageData);
+                backPreview.classList.add('filled');
+                backPreview.querySelector('.preview-icon').style.display = 'none';
+                backRotation = 0;
+                statusDiv.textContent = 'Reverso de la credencial capturado correctamente';
+                console.log('Imagen reverso guardada');
+            }
+            
+            statusDiv.className = 'status status-success';
+            closeCamera();
+            updateUI();
+        }
+
+        // Actualizar imagen de vista previa
+        function updatePreviewImage(imgElement, imageData) {
+            const tempImg = new Image();
+            tempImg.onload = function() {
+                imgElement.src = imageData;
+                imgElement.style.display = 'block';
+                imgElement.style.objectFit = 'contain';
+                imgElement.style.width = '100%';
+                imgElement.style.height = '100%';
+            };
+            tempImg.src = imageData;
+        }
+
+        // Rotar imagen
+        function rotateImage(side) {
+            if (side === 'front' && frontImageData) {
+                frontRotation = (frontRotation + 90) % 360;
+                frontImage.style.transform = `rotate(${frontRotation}deg)`;
+            } else if (side === 'back' && backImageData) {
+                backRotation = (backRotation + 90) % 360;
+                backImage.style.transform = `rotate(${backRotation}deg)`;
+            }
+        }
+
+        // Generar PDF - CORREGIDO para mantener relación de aspecto
+        function generatePDF() {
+            if (!frontImageData || !backImageData) {
+                statusDiv.textContent = 'Error: Debes capturar ambas caras de la credencial primero';
+                statusDiv.className = 'status status-error';
+                return;
+            }
+            
+            statusDiv.textContent = 'Generando PDF...';
+            statusDiv.className = 'status status-info';
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Título
+            doc.setFontSize(20);
+            doc.text('CREDENCIAL OFICIAL', 105, 20, { align: 'center' });
+            
+            // Fecha
+            const now = new Date();
+            doc.setFontSize(10);
+            doc.text(`Escaneado el: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 105, 27, { align: 'center' });
+            
+            // Crear promesas para cargar ambas imágenes
+            const loadFrontImage = new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = frontImageData;
+            });
+            
+            const loadBackImage = new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = backImageData;
+            });
+            
+            // Cuando ambas imágenes estén cargadas, generar el PDF
+            Promise.all([loadFrontImage, loadBackImage]).then(([frontImg, backImg]) => {
+                
+                // Dimensiones máximas para las imágenes en el PDF
+                const maxWidth = 170; // mm
+                const maxHeight = 100; // mm
+                
+                // Calcular dimensiones para la imagen frontal manteniendo relación de aspecto
+                let frontWidth, frontHeight;
+                const frontAspectRatio = frontImg.width / frontImg.height;
+                
+                if (frontAspectRatio > maxWidth / maxHeight) {
+                    // La imagen es más ancha que el contenedor
+                    frontWidth = maxWidth;
+                    frontHeight = maxWidth / frontAspectRatio;
+                } else {
+                    // La imagen es más alta que el contenedor
+                    frontHeight = maxHeight;
+                    frontWidth = maxHeight * frontAspectRatio;
+                }
+                
+                // Calcular posición para centrar la imagen
+                const frontX = (210 - frontWidth) / 2;
+                const frontY = 40;
+                
+                // Calcular dimensiones para la imagen reverso manteniendo relación de aspecto
+                let backWidth, backHeight;
+                const backAspectRatio = backImg.width / backImg.height;
+                
+                if (backAspectRatio > maxWidth / maxHeight) {
+                    // La imagen es más ancha que el contenedor
+                    backWidth = maxWidth;
+                    backHeight = maxWidth / backAspectRatio;
+                } else {
+                    // La imagen es más alta que el contenedor
+                    backHeight = maxHeight;
+                    backWidth = maxHeight * backAspectRatio;
+                }
+                
+                // Calcular posición para centrar la imagen
+                const backX = (210 - backWidth) / 2;
+                const backY = frontY + frontHeight + 20;
+                
+                // Aplicar rotaciones si es necesario
+                let frontImgData = frontImageData;
+                let backImgData = backImageData;
+                
+                // Agregar imágenes al PDF
+                doc.addImage(
+                    frontImgData, 
+                    'JPEG', 
+                    frontX, 
+                    frontY, 
+                    frontWidth, 
+                    frontHeight
+                );
+                
+                doc.setFontSize(12);
+                doc.text('FRENTE', 105, frontY + frontHeight + 8, { align: 'center' });
+                
+                doc.addImage(
+                    backImgData, 
+                    'JPEG', 
+                    backX, 
+                    backY, 
+                    backWidth, 
+                    backHeight
+                );
+                
+                doc.text('REVERSO', 105, backY + backHeight + 8, { align: 'center' });
+                
+                // Pie de página
+                doc.setFontSize(8);
+                doc.text('Documento generado por Escáner de Credenciales', 105, 285, { align: 'center' });
+                
+                pdfFile = doc.output('blob');
+                
+                statusDiv.textContent = 'PDF generado correctamente con ambas imágenes diferentes';
+                statusDiv.className = 'status status-success';
+                downloadBtn.disabled = false;
+                sendEmailBtn.disabled = false;
+                
+            }).catch(error => {
+                console.error('Error al cargar imágenes:', error);
+                statusDiv.textContent = 'Error al generar el PDF';
+                statusDiv.className = 'status status-error';
+            });
+        }
+
+        // Obtener correo destino
+        function getTargetEmail() {
+            if (emailSelect.value === 'otro') {
+                return customEmailInput.value.trim();
+            } else {
+                return emailSelect.value;
+            }
+        }
+
+        // Enviar por correo
+        function sendEmail() {
+            if (!pdfFile) {
+                statusDiv.textContent = 'Error: Primero debes generar el PDF';
+                statusDiv.className = 'status status-error';
+                return;
+            }
+
+            const targetEmail = getTargetEmail();
+            
+            if (!targetEmail) {
+                statusDiv.textContent = 'Error: Debes seleccionar o ingresar un correo válido';
+                statusDiv.className = 'status status-error';
+                return;
+            }
+
+            // Validar formato de email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(targetEmail)) {
+                statusDiv.textContent = 'Error: El formato del correo electrónico no es válido';
+                statusDiv.className = 'status status-error';
+                return;
+            }
+
+            const userName = userNameInput.value.trim() || 'el cliente';
+            const fileName = generateFileName();
+            
+            // Crear el enlace mailto
+            const subject = `Credencial Escaneada - ${userName}`;
+            const body = `Estimado equipo,%0D%0A%0D%0AAdjunto encontrarás el PDF con las imágenes escaneadas de la credencial de ${userName}.%0D%0A%0D%0APara cualquier aclaración, quedo a sus órdenes.%0D%0A%0D%0ASaludos cordiales.`;
+            
+            const mailtoLink = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${body}`;
+            
+            // Abrir el cliente de correo
+            window.location.href = mailtoLink;
+            
+            statusDiv.textContent = `Abriendo cliente de correo para: ${targetEmail}`;
+            statusDiv.className = 'status status-success';
+            
+            // Mensaje informativo adicional
+            setTimeout(() => {
+                statusDiv.textContent = '💡 Consejo: Descarga el PDF primero y luego adjúntalo manualmente en el correo';
+                statusDiv.className = 'status status-info';
+            }, 3000);
+        }
+
+        // Generar nombre de archivo
+        function generateFileName() {
+            const name = userNameInput.value.trim();
+            const id = userIdInput.value.trim();
+            
+            let fileName = 'credencial';
+            
+            if (name) {
+                const cleanName = name
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]/g, '_')
+                    .replace(/_+/g, '_')
+                    .replace(/^_|_$/g, '');
+                fileName = cleanName;
+            }
+            
+            if (id) {
+                fileName += `_${id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            }
+            
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            return `${fileName}_${dateStr}.pdf`;
+        }
+
+        // Descargar PDF
+        function downloadPDF() {
+            if (!pdfFile) return;
+            
+            const url = URL.createObjectURL(pdfFile);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = generateFileName();
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            statusDiv.textContent = 'PDF descargado correctamente';
+        }
+
+        // Actualizar UI
+        function updateUI() {
+            generatePdfBtn.disabled = !(frontImageData && backImageData);
+            rotateFrontBtn.style.display = frontImageData ? 'flex' : 'none';
+            rotateBackBtn.style.display = backImageData ? 'flex' : 'none';
+            
+            if (frontImageData && backImageData && !pdfFile) {
+                statusDiv.textContent = 'Ambas caras capturadas. Presiona "Generar PDF"';
+                statusDiv.className = 'status status-info';
+            }
+        }
+
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM cargado, inicializando...');
+            init();
+        });
+
+        // También inicializar cuando la ventana cargue completamente
+        window.addEventListener('load', function() {
+            console.log('Ventana cargada completamente');
+        });
+    </script>
+</body>
+</html>
